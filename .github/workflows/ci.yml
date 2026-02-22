@@ -29,8 +29,8 @@ jobs:
           # Tests use SQLite in-memory (override in conftest.py).
           # This dummy URL prevents the module-level engine from
           # importing a missing PostgreSQL driver at import time.
-          DATABASE_URL: sqlite+aiosqlite:///:memory:
-          REDIS_URL: redis://localhost:6379/0
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+          REDIS_URL: "redis://localhost:6379/0"
         run: |
           pytest tests/ -v \
             --cov=app \
