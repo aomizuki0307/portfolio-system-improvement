@@ -1,0 +1,21 @@
+# Force LF line endings for all text files.
+# Prevents CRLF issues across Windows / Linux / macOS dev environments
+# and ensures consistent behaviour inside Docker containers.
+
+* text=auto eol=lf
+
+# Explicitly mark binary files so Git never mangles them
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
+*.woff binary
+*.woff2 binary
+*.ttf  binary
+*.otf  binary
+*.eot  binary
+*.zip  binary
+*.tar  binary
+*.gz   binary

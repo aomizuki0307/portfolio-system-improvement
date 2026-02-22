@@ -1,0 +1,27 @@
+# ---------------------------------------------------------------------------
+# Production dependencies — pin all versions for reproducible builds.
+# ---------------------------------------------------------------------------
+
+# Web framework
+fastapi==0.115.6
+
+# ASGI server (includes websockets, uvloop, httptools extras)
+uvicorn[standard]==0.34.0
+
+# ORM with async support
+sqlalchemy[asyncio]==2.0.36
+
+# Async PostgreSQL driver (used by SQLAlchemy asyncpg dialect)
+asyncpg==0.30.0
+
+# Database migration tooling
+alembic==1.14.1
+
+# Redis client
+redis==5.2.1
+
+# Settings management via pydantic + .env files
+pydantic-settings==2.7.1
+
+# .env file loading
+python-dotenv==1.0.1

@@ -1,0 +1,21 @@
+# ---------------------------------------------------------------------------
+# Development & test dependencies — includes all production dependencies.
+# Install with: pip install -r requirements-dev.txt
+# ---------------------------------------------------------------------------
+
+-r requirements.txt
+
+# Test runner
+pytest==8.3.4
+
+# Async test support for pytest
+pytest-asyncio==0.25.0
+
+# HTTP client for FastAPI TestClient (async-compatible)
+httpx==0.28.1
+
+# In-memory SQLite driver for unit tests (avoids real Postgres dependency)
+aiosqlite==0.20.0
+
+# Coverage reporting
+pytest-cov==6.0.0

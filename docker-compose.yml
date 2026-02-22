@@ -1,0 +1,75 @@
+---
+# ---------------------------------------------------------------------------
+# docker-compose.yml — local development stack
+#
+# Services:
+#   postgres  — PostgreSQL 16 on host port 5433
+#   redis     — Redis 7 on host port 6380
+#   app       — FastAPI application on host port 8000
+#
+# Usage:
+#   docker compose up --build          # start everything
+#   docker compose down -v             # stop and remove volumes
+# ---------------------------------------------------------------------------
+
+services:
+
+  # --------------------------------------------------------------------------
+  # PostgreSQL
+  # --------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: blogdb
+      POSTGRES_USER: bloguser
+      POSTGRES_PASSWORD: blogpass
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bloguser -d blogdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # --------------------------------------------------------------------------
+  # Redis
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # --------------------------------------------------------------------------
+  # FastAPI application
+  # --------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+# ---------------------------------------------------------------------------
+# Named volumes
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_data:
