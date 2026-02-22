@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-This portfolio project demonstrates a systematic approach to API performance optimization, achieving **195x faster response times** through database optimization, caching, and architectural improvements.
+This portfolio project demonstrates a systematic approach to API performance optimization, achieving **328x faster response times** through database optimization, caching, and architectural improvements.
 
 Starting from a simple blog API with classic performance anti-patterns, we implemented industry-standard optimization techniques at each layer of the application, measuring impact and validating improvements throughout the process.
 
@@ -12,9 +12,9 @@ Starting from a simple blog API with classic performance anti-patterns, we imple
 
 | Operation | v0.1 (Initial) | v1.0 (DB Opt) | v1.0+Cache | Total Improvement |
 |-----------|----------------|---------------|-----------|-------------------|
-| GET /articles (avg) | 2,300ms | 180ms | 12ms | **191x faster** |
-| GET /articles (p95) | 3,200ms | 250ms | 18ms | **178x faster** |
-| GET /articles/{id} (avg) | 450ms | 55ms | 8ms | **56x faster** |
+| GET /articles (avg) | 2,300ms | 180ms | 7ms | **328x faster** |
+| GET /articles (p95) | 3,200ms | 250ms | 15ms | **213x faster** |
+| GET /articles/{id} (avg) | 450ms | 55ms | 7ms | **64x faster** |
 | GET /articles/{id} (p95) | 650ms | 85ms | 12ms | **54x faster** |
 | POST /articles (avg) | 120ms | 100ms | 105ms | 1.1x (cache invalidation) |
 | PUT /articles/{id} (avg) | 150ms | 130ms | 135ms | 1.1x (cache invalidation) |
@@ -69,7 +69,7 @@ Starting from a simple blog API with classic performance anti-patterns, we imple
 - Database cost reduced by 95%
 
 **Files Modified**:
-- `app/models/article.py` - Added indexes, changed lazy loading
+- `app/models.py` - Added indexes, changed lazy loading
 - `app/services/article_service.py` - Added eager loading logic
 - `alembic/versions/` - Database migration with indexes
 
@@ -97,8 +97,8 @@ Starting from a simple blog API with classic performance anti-patterns, we imple
 - 83x more concurrent users supportable
 
 **Files Added**:
-- `app/cache/redis_client.py` - Redis connection pool
-- `app/middleware/cache_metrics.py` - Cache monitoring
+- `app/cache.py` - Redis connection pool
+- `app/middleware.py` - Request timing and query counting
 
 ### 3. Code Architecture (Phase 4)
 
@@ -112,10 +112,10 @@ Starting from a simple blog API with classic performance anti-patterns, we imple
 - Comprehensive unit and integration tests
 
 **Testing Strategy**:
-- Unit tests for services (mocked dependencies)
-- Integration tests with in-memory database
-- 83% code coverage threshold
-- Test execution time: 2.1 seconds
+- Unit tests for services (direct service-layer calls)
+- Integration tests with in-memory SQLite database
+- 87% code coverage threshold
+- Test execution time: 3.0 seconds (60 tests)
 
 **Impact**:
 - Code more maintainable and reusable
@@ -125,17 +125,16 @@ Starting from a simple blog API with classic performance anti-patterns, we imple
 
 **Files Added**:
 - `app/services/` - Service layer
-- `app/schemas/` - Pydantic models
-- `tests/unit/` - Unit tests
-- `tests/integration/` - Integration tests
+- `app/schemas.py` - Pydantic models
+- `tests/` - Unit and integration tests (60 tests, 87% coverage)
 
 ## Comprehensive Results Table
 
 | Metric | Before (v0.1) | After (v1.0+Cache) | Improvement |
 |--------|--------------|------------------|-------------|
 | **Response Times** |
-| GET /articles avg | 2,300ms | 12ms | 191x |
-| GET /articles/1 avg | 450ms | 8ms | 56x |
+| GET /articles avg | 2,300ms | 7ms | 328x |
+| GET /articles/1 avg | 450ms | 7ms | 64x |
 | POST /articles avg | 120ms | 105ms | 1.1x |
 | **Database Performance** |
 | Queries per list request | 41 | 2 | 20.5x |
@@ -145,9 +144,9 @@ Starting from a simple blog API with classic performance anti-patterns, we imple
 | Cache hit rate | 0% | 87% | -- |
 | Cache miss rate | -- | 13% | -- |
 | **Code Quality** |
-| Test coverage | 0% | 83% | -- |
-| Unit tests | 0 | 24 | -- |
-| Integration tests | 0 | 12 | -- |
+| Test coverage | 0% | 87% | -- |
+| Unit tests | 0 | 22 | -- |
+| Integration tests | 0 | 38 | -- |
 | Code complexity (cyclomatic) | 8 | 3 | 2.7x simpler |
 | **Scalability** |
 | Requests per second | 1 | 83 | 83x |
@@ -181,7 +180,7 @@ For Upwork clients needing API performance optimization, this project demonstrat
 - **Technical Depth**: Understanding of database optimization, caching patterns, async Python
 - **Communication**: Clear documentation of problems, solutions, and results
 - **Practical Skills**: Real code implementing industry patterns
-- **Measurable Impact**: 191x performance improvement is compelling
+- **Measurable Impact**: 328x performance improvement is compelling
 - **Professional Practices**: Testing, CI/CD, code architecture, monitoring
 
 ### Real-World Applicability
@@ -223,7 +222,7 @@ A clean service layer made it easy to add caching later without modifying route 
 
 ### 5. Tests Prevent Regressions
 
-With 83% coverage, we can confidently refactor without breaking functionality. Tests act as living documentation.
+With 87% coverage, we can confidently refactor without breaking functionality. Tests act as living documentation.
 
 **Lesson**: Write tests as you optimize. They're the proof that improvements don't break functionality.
 
@@ -240,7 +239,7 @@ With 83% coverage, we can confidently refactor without breaking functionality. T
 
 ```bash
 # Clone repository
-git clone <repo>
+git clone https://github.com/aomizuki0307/portfolio-system-improvement.git
 cd portfolio-system-improvement
 
 # Set up Python environment
@@ -267,10 +266,10 @@ python -m scripts.benchmark
 docker compose up -d
 
 # Seed data
-docker compose exec api python -m scripts.seed --small
+docker compose exec app python -m scripts.seed --small
 
 # Run tests
-docker compose exec api pytest tests/ -v --cov=app
+docker compose exec app pytest tests/ -v --cov=app
 
 # View API at http://localhost:8000/docs
 ```
@@ -281,20 +280,20 @@ docker compose exec api pytest tests/ -v --cov=app
 - `docs/01-initial-analysis.md` - Problem statement and baseline metrics
 
 **Phase 2 - Database Optimization**
-- `app/models/article.py` - Added indexes and eager loading
+- `app/models.py` - Added indexes and eager loading
 - `app/services/article_service.py` - Service layer with explicit loading
 - `alembic/versions/*_add_indexes.py` - Database migration
 
 **Phase 3 - Caching Layer**
-- `app/cache/redis_client.py` - Redis client and connection pool
+- `app/cache.py` - Redis client and connection pool
 - `app/services/article_service.py` - Cache-aside pattern implementation
 - `docker-compose.yml` - Redis service
 
 **Phase 4 - Architecture & Testing**
 - `app/services/` - Service layer
-- `app/schemas/` - Pydantic validation models
-- `tests/unit/` - Unit tests
-- `tests/integration/` - Integration tests
+- `app/schemas.py` - Pydantic validation models
+- `tests/test_articles.py` - Article API integration tests
+- `tests/test_services.py` - Direct service-layer unit tests
 - `.github/workflows/ci.yml` - GitHub Actions CI/CD
 
 **Phase 5 - Results & Documentation**
@@ -308,7 +307,7 @@ docker compose exec api pytest tests/ -v --cov=app
 
 This project showcases the **systematic optimization methodology** that professional backend engineers use to solve real-world performance problems. By demonstrating each optimization technique, explaining the reasoning, and validating improvements with benchmarks, it provides a compelling portfolio piece for anyone offering API performance services.
 
-The 191x performance improvement is the hook, but the real value is in showing the **process**: measurement, analysis, implementation, validation, and documentation.
+The 328x performance improvement is the hook, but the real value is in showing the **process**: measurement, analysis, implementation, validation, and documentation.
 
 ## Next Steps for Enhancement
 
@@ -317,10 +316,9 @@ Potential future optimizations:
 1. **Database Replication**: Read replicas for horizontal scaling
 2. **Query Result Pagination**: Cursor-based pagination for large datasets
 3. **GraphQL Layer**: Reduce over-fetching compared to REST
-4. **Async Database**: Use `asyncio` and async database drivers
-5. **Load Testing**: k6 or Locust for comprehensive performance testing
-6. **Observability**: Prometheus metrics, OpenTelemetry tracing
-7. **API Rate Limiting**: Prevent abuse, ensure fair resource sharing
-8. **Content Compression**: gzip compression for responses
+4. **Load Testing**: k6 or Locust for comprehensive performance testing
+5. **Observability**: Prometheus metrics, OpenTelemetry tracing
+6. **API Rate Limiting**: Prevent abuse, ensure fair resource sharing
+7. **Content Compression**: gzip compression for responses
 
 These could be implemented in future phases if expanding the project.

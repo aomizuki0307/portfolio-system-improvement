@@ -1,13 +1,15 @@
 # Blog API — System Performance Improvement Portfolio
 
-> Demonstrating systematic API performance optimization: **195x faster response times** through database optimization, caching, and architectural improvements.
+[![CI](https://github.com/aomizuki0307/portfolio-system-improvement/actions/workflows/ci.yml/badge.svg)](https://github.com/aomizuki0307/portfolio-system-improvement/actions/workflows/ci.yml)
+
+> Demonstrating systematic API performance optimization: **328x faster response times** through database optimization, caching, and architectural improvements.
 
 ## Performance Results
 
 | Metric | Before (v0.1) | After (v1.0) | Improvement |
 |--------|---------------|--------------|-------------|
-| GET /articles avg | 2,300ms | 12ms | **195x faster** |
-| GET /articles/{id} avg | 450ms | 8ms | **56x faster** |
+| GET /articles avg | 2,300ms | 7ms | **328x faster** |
+| GET /articles/{id} avg | 450ms | 7ms | **64x faster** |
 | Queries per request (list) | 41 | 2 | **20x reduction** |
 | Cache hit rate | 0% | 87% | -- |
 | Test coverage | 0% | 87% | -- |
