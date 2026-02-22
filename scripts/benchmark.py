@@ -65,7 +65,7 @@ async def benchmark_endpoint(client: httpx.AsyncClient, name: str, path: str, it
 
 async def run_benchmark(iterations: int = 50):
     print("=" * 80)
-    print(f"Blog API Benchmark — {iterations} iterations per endpoint")
+    print(f"Blog API Benchmark - {iterations} iterations per endpoint")
     print(f"Target: {BASE_URL}")
     print("=" * 80)
 
@@ -78,7 +78,7 @@ async def run_benchmark(iterations: int = 50):
                 return
             print(f"Health: {resp.json()}")
         except Exception as e:
-            print(f"ERROR: Cannot connect to {BASE_URL} — {e}")
+            print(f"ERROR: Cannot connect to {BASE_URL} - {e}")
             return
 
         print()
@@ -108,12 +108,12 @@ async def run_benchmark(iterations: int = 50):
 
 
 def main():
+    global BASE_URL
     parser = argparse.ArgumentParser(description="Benchmark blog API")
     parser.add_argument("-n", "--iterations", type=int, default=50, help="Iterations per endpoint")
     parser.add_argument("--base-url", default=BASE_URL, help="API base URL")
     args = parser.parse_args()
 
-    global BASE_URL
     BASE_URL = args.base_url
     asyncio.run(run_benchmark(args.iterations))
 

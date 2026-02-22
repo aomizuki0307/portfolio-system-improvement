@@ -42,8 +42,11 @@ WORKDIR /app
 # Pull installed packages from the builder stage
 COPY --from=builder /install /usr/local
 
-# Copy application source code
+# Copy application source code and scripts
 COPY app/ ./app/
+COPY scripts/ ./scripts/
+COPY alembic/ ./alembic/
+COPY alembic.ini .
 
 # Switch to non-root user before the final CMD
 USER appuser
