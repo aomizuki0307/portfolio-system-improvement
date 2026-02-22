@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.schemas import UserCreate, UserResponse, UserDetail
@@ -19,4 +20,10 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("", status_code=201, response_model=UserResponse)
 async def create_user(data: UserCreate, db: AsyncSession = Depends(get_db)):
-    return await user_service.create_user(db, data)
+    try:
+        return await user_service.create_user(db, data)
+    except IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="A user with this username or email already exists",
+        )

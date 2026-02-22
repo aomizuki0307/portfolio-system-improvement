@@ -201,13 +201,37 @@ async def get_articles(
 async def get_article(db: AsyncSession, article_id: int) -> dict | None:
     """
     Return the full detail dict for *article_id* (including content and
-    comments), incrementing the view counter on each hit.
+    comments), incrementing the view counter on every access.
 
     Returns None when the article does not exist.
+
+    The view_count increment always hits the database regardless of cache
+    state, ensuring accurate analytics.  On a cache hit the DB is touched
+    only for the lightweight UPDATE; on a miss the full SELECT + UPDATE
+    are issued.
     """
+    # Always increment view_count in the DB first.
+    increment_query_count()
+    update_result = await db.execute(
+        select(Article.id).where(Article.id == article_id)
+    )
+    if update_result.scalar_one_or_none() is None:
+        return None
+
+    await db.execute(
+        Article.__table__.update()
+        .where(Article.id == article_id)
+        .values(view_count=Article.view_count + 1)
+    )
+    increment_query_count()
+    await db.flush()
+
     cache_key = f"articles:detail:{article_id}"
     cached = await cache.get(cache_key)
     if cached:
+        # Reflect the incremented count in the cached response.
+        cached["view_count"] = cached.get("view_count", 0) + 1
+        await cache.set(cache_key, cached, ttl=settings.CACHE_TTL_DETAIL)
         return cached
 
     q = (
@@ -224,11 +248,6 @@ async def get_article(db: AsyncSession, article_id: int) -> dict | None:
     article = result.unique().scalar_one_or_none()
     if article is None:
         return None
-
-    # Increment view count and flush within the current transaction.
-    article.view_count += 1
-    increment_query_count()
-    await db.flush()
 
     data = _article_detail_to_dict(article)
     await cache.set(cache_key, data, ttl=settings.CACHE_TTL_DETAIL)
@@ -301,9 +320,15 @@ async def update_article(
     for field, value in update_data.items():
         setattr(article, field, value)
 
-    # Re-generate slug if the title changed.
+    # Re-generate slug if the title changed, with collision avoidance.
     if "title" in update_data:
-        article.slug = slugify(update_data["title"])
+        new_slug = slugify(update_data["title"])
+        existing = await db.execute(
+            select(Article).where(Article.slug == new_slug, Article.id != article_id)
+        )
+        if existing.scalar_one_or_none() is not None:
+            new_slug = f"{new_slug}-{int(time.time())}"
+        article.slug = new_slug
 
     # Set published_at the first time the article is published.
     if data.is_published and not article.published_at:

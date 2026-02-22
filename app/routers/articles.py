@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.dependencies import PaginationParams
@@ -25,11 +26,23 @@ async def get_article(article_id: int, db: AsyncSession = Depends(get_db)):
 
 @router.post("", status_code=201)
 async def create_article(data: ArticleCreate, db: AsyncSession = Depends(get_db)):
-    return await article_service.create_article(db, data)
+    try:
+        return await article_service.create_article(db, data)
+    except IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="An article with this slug already exists",
+        )
 
 @router.put("/{article_id}")
 async def update_article(article_id: int, data: ArticleUpdate, db: AsyncSession = Depends(get_db)):
-    article = await article_service.update_article(db, article_id, data)
+    try:
+        article = await article_service.update_article(db, article_id, data)
+    except IntegrityError:
+        raise HTTPException(
+            status_code=409,
+            detail="An article with this slug already exists",
+        )
     if not article:
         raise HTTPException(status_code=404, detail="Article not found")
     return article

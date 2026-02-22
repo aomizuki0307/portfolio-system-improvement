@@ -1,16 +1,15 @@
 import time
 from contextvars import ContextVar
 
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.requests import Request
-from starlette.responses import Response
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 # ---------------------------------------------------------------------------
 # Per-request context variable
 # ---------------------------------------------------------------------------
 
-# Each asyncio Task (i.e. each request) gets its own isolated copy of this
-# variable, so concurrent requests never interfere with each other's count.
+# Each request gets its own isolated copy of this variable via
+# copy_context(), so concurrent requests never interfere with each
+# other's count.
 query_count_var: ContextVar[int] = ContextVar("query_count", default=0)
 
 
@@ -26,32 +25,43 @@ def increment_query_count() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Middleware
+# Middleware (pure ASGI — avoids BaseHTTPMiddleware ContextVar isolation)
 # ---------------------------------------------------------------------------
 
-class TimingMiddleware(BaseHTTPMiddleware):
+class TimingMiddleware:
     """
-    ASGI middleware that adds two diagnostic response headers:
+    Pure ASGI middleware that adds two diagnostic response headers:
 
-    - ``X-Response-Time-Ms``: wall-clock time for the entire request
-      measured with ``time.perf_counter`` (sub-millisecond resolution).
+    - ``X-Response-Time-Ms``: wall-clock time for the entire request.
     - ``X-Query-Count``: number of SQL queries executed during the
       request, as reported by ``increment_query_count`` calls in the
       service layer.
 
-    Both headers are purely informational and safe to expose on an
-    internal/staging environment.  Strip them at the reverse-proxy
-    (nginx/ALB) boundary before serving public traffic if desired.
+    Unlike ``BaseHTTPMiddleware``, this does NOT spawn a child asyncio
+    task for the inner application, so ``ContextVar`` mutations made by
+    route handlers and service functions are visible when we read the
+    counter after the response has been sent.
     """
 
-    async def dispatch(self, request: Request, call_next) -> Response:
-        # Reset the per-request counter before the handler runs.
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] not in ("http", "websocket"):
+            await self.app(scope, receive, send)
+            return
+
+        # Reset the per-request counter.
         query_count_var.set(0)
-
         start = time.perf_counter()
-        response: Response = await call_next(request)
-        duration_ms = round((time.perf_counter() - start) * 1000, 2)
 
-        response.headers["X-Response-Time-Ms"] = str(duration_ms)
-        response.headers["X-Query-Count"] = str(query_count_var.get())
-        return response
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                duration_ms = round((time.perf_counter() - start) * 1000, 2)
+                headers = list(message.get("headers", []))
+                headers.append((b"x-response-time-ms", str(duration_ms).encode()))
+                headers.append((b"x-query-count", str(query_count_var.get()).encode()))
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)

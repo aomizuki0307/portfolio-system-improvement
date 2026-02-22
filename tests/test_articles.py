@@ -335,15 +335,8 @@ async def test_response_timing_headers(async_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_article_list_query_count_header(async_client: AsyncClient):
     """
-    The X-Query-Count header must be present and contain a valid integer.
-
-    Note: BaseHTTPMiddleware runs call_next in a separate asyncio task which
-    creates a new ContextVar copy.  Increments made by service functions in
-    that child task are not visible in the middleware's task, so the counter
-    reads as 0 in the test environment.  The test therefore only asserts that
-    the header exists and is a parseable integer — the non-zero behaviour is
-    an integration concern verified by end-to-end tests against the real ASGI
-    server where starlette does not isolate tasks in the same way.
+    The X-Query-Count header must be present and reflect the actual number
+    of SQL queries executed during the request.
     """
     user_resp = await async_client.post("/api/v1/users", json={
         "username": "qcuser",
@@ -359,6 +352,6 @@ async def test_article_list_query_count_header(async_client: AsyncClient):
 
     resp = await async_client.get("/api/v1/articles")
     assert "x-query-count" in resp.headers
-    # Must be parseable as an integer (middleware always sets this header).
     count = int(resp.headers["x-query-count"])
-    assert count >= 0
+    # Article list issues at least 2 queries: COUNT + SELECT.
+    assert count >= 2
