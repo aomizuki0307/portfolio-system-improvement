@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
+from app.middleware import install_query_counter
 
 # Module-level engine variable allows tests to override with a test engine.
 engine = create_async_engine(
@@ -9,6 +10,9 @@ engine = create_async_engine(
     echo=settings.DEBUG,
     pool_pre_ping=True,
 )
+
+# Register the per-request SQL query counter on the production engine.
+install_query_counter(engine)
 
 async_session = async_sessionmaker(
     engine,

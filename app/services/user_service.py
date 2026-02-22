@@ -9,7 +9,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.middleware import increment_query_count
 from app.models import User
 from app.schemas import UserCreate
 
@@ -63,7 +62,7 @@ async def get_users(db: AsyncSession) -> list[dict]:
     Articles are not loaded in the list view to keep the payload lean.
     """
     q = select(User).order_by(User.created_at.desc())
-    increment_query_count()
+
     result = await db.execute(q)
     return [_user_to_dict(u) for u in result.scalars().all()]
 
@@ -82,7 +81,7 @@ async def get_user(db: AsyncSession, user_id: int) -> dict | None:
         .where(User.id == user_id)
         .options(selectinload(User.articles))
     )
-    increment_query_count()
+
     result = await db.execute(q)
     user = result.unique().scalar_one_or_none()
     if user is None:

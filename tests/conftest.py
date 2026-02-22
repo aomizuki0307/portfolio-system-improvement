@@ -25,6 +25,7 @@ from sqlalchemy.pool import StaticPool
 from app.database import Base, get_db
 from app.main import app
 from app.cache import cache
+from app.middleware import install_query_counter
 
 # ---------------------------------------------------------------------------
 # Test database engine — SQLite in-memory with aiosqlite
@@ -37,6 +38,9 @@ engine_test = create_async_engine(
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
+
+# Register the per-request SQL query counter on the test engine.
+install_query_counter(engine_test)
 
 async_session_test = async_sessionmaker(
     engine_test,

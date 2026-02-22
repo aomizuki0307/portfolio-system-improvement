@@ -10,7 +10,6 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cache import cache
-from app.middleware import increment_query_count
 from app.models import Article, Comment
 from app.schemas import CommentCreate
 
@@ -32,7 +31,7 @@ async def add_comment(
     """
     # Verify the article exists before creating the comment.
     q = select(Article).where(Article.id == article_id)
-    increment_query_count()
+
     result = await db.execute(q)
     article = result.scalar_one_or_none()
     if article is None:

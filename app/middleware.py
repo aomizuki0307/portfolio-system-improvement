@@ -1,27 +1,32 @@
 import time
 from contextvars import ContextVar
 
+from sqlalchemy import event
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 # ---------------------------------------------------------------------------
 # Per-request context variable
 # ---------------------------------------------------------------------------
 
-# Each request gets its own isolated copy of this variable via
-# copy_context(), so concurrent requests never interfere with each
-# other's count.
 query_count_var: ContextVar[int] = ContextVar("query_count", default=0)
 
 
-def increment_query_count() -> None:
+def install_query_counter(engine) -> None:
     """
-    Increment the database-query counter for the current request.
+    Register a ``before_cursor_execute`` event listener on *engine* that
+    increments the per-request ``query_count_var`` for every SQL statement.
 
-    Call this once for every SQL statement executed inside a service
-    function so that the middleware can expose the total via a response
-    header for N+1 diagnosis and performance monitoring.
+    This captures ALL queries including those issued internally by
+    SQLAlchemy eager-loading strategies (``selectinload``, ``joinedload``).
+
+    Must be called once per engine (production engine in ``database.py``,
+    test engine in ``conftest.py``).
     """
-    query_count_var.set(query_count_var.get() + 1)
+    sync_engine = engine.sync_engine
+
+    @event.listens_for(sync_engine, "before_cursor_execute")
+    def _count_query(conn, cursor, statement, parameters, context, executemany):
+        query_count_var.set(query_count_var.get() + 1)
 
 
 # ---------------------------------------------------------------------------
@@ -33,14 +38,13 @@ class TimingMiddleware:
     Pure ASGI middleware that adds two diagnostic response headers:
 
     - ``X-Response-Time-Ms``: wall-clock time for the entire request.
-    - ``X-Query-Count``: number of SQL queries executed during the
-      request, as reported by ``increment_query_count`` calls in the
-      service layer.
+    - ``X-Query-Count``: total SQL queries executed during the request,
+      automatically counted via the SQLAlchemy engine event registered
+      by ``install_query_counter``.
 
     Unlike ``BaseHTTPMiddleware``, this does NOT spawn a child asyncio
-    task for the inner application, so ``ContextVar`` mutations made by
-    route handlers and service functions are visible when we read the
-    counter after the response has been sent.
+    task for the inner application, so ``ContextVar`` mutations are
+    visible when we read the counter after the response has been sent.
     """
 
     def __init__(self, app: ASGIApp) -> None:

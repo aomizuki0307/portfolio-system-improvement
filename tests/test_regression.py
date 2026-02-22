@@ -10,8 +10,8 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services import article_service, user_service
-from app.schemas import ArticleCreate, UserCreate
+from app.services import article_service
+from app.schemas import ArticleCreate
 
 
 # ---------------------------------------------------------------------------
@@ -140,8 +140,12 @@ async def test_view_count_increments_via_http(async_client: AsyncClient):
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_query_count_header_nonzero_for_article_list(async_client: AsyncClient):
-    """X-Query-Count must be > 0 when the endpoint executes SQL queries."""
+async def test_query_count_header_exact_for_article_list(async_client: AsyncClient):
+    """
+    X-Query-Count must reflect ALL SQL statements including selectinload
+    internals.  Article list issues: COUNT + SELECT(joinedload author) +
+    selectinload(tags) = 3 queries.
+    """
     user_resp = await async_client.post("/api/v1/users", json={
         "username": "qctest", "email": "qctest@example.com",
     })
@@ -156,12 +160,16 @@ async def test_query_count_header_nonzero_for_article_list(async_client: AsyncCl
     resp = await async_client.get("/api/v1/articles")
     assert resp.status_code == 200
     count = int(resp.headers["x-query-count"])
-    assert count >= 2, f"Expected >= 2 queries for article list, got {count}"
+    assert count == 3, f"Expected exactly 3 queries for article list, got {count}"
 
 
 @pytest.mark.asyncio
-async def test_query_count_header_nonzero_for_article_detail(async_client: AsyncClient):
-    """X-Query-Count must be > 0 for article detail."""
+async def test_query_count_header_exact_for_article_detail(async_client: AsyncClient):
+    """
+    X-Query-Count for article detail must count: existence check +
+    UPDATE view_count + SELECT(joinedload author) + selectinload(tags) +
+    selectinload(comments) = 5 queries.
+    """
     user_resp = await async_client.post("/api/v1/users", json={
         "username": "qcdetail", "email": "qcdetail@example.com",
     })
@@ -177,7 +185,7 @@ async def test_query_count_header_nonzero_for_article_detail(async_client: Async
     resp = await async_client.get(f"/api/v1/articles/{article_id}")
     assert resp.status_code == 200
     count = int(resp.headers["x-query-count"])
-    assert count >= 1, f"Expected >= 1 queries for article detail, got {count}"
+    assert count == 5, f"Expected exactly 5 queries for article detail, got {count}"
 
 
 # ---------------------------------------------------------------------------

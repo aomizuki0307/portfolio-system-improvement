@@ -11,9 +11,9 @@ Design notes
   throughout to eliminate N+1 queries.  The ``unique()`` call is
   required after any query that uses ``joinedload`` with collections to
   deduplicate the joined rows that SQLAlchemy returns.
-- ``increment_query_count()`` is called once per ``db.execute`` so the
-  ``TimingMiddleware`` can surface the total in the ``X-Query-Count``
-  response header.
+- SQL queries are automatically counted by the engine-level event
+  listener (``install_query_counter``), so ``X-Query-Count`` accurately
+  reflects every statement including eager-loading internals.
 - Service functions flush but do not commit; the transaction boundary
   is owned by the ``get_db`` dependency in the router layer.
 """
@@ -28,7 +28,6 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.cache import cache
 from app.config import settings
-from app.middleware import increment_query_count
 from app.models import Article, Comment, Tag
 from app.schemas import ArticleCreate, ArticleUpdate, PaginatedResponse
 
@@ -168,7 +167,7 @@ async def get_articles(
         .select_from(Article)
         .where(Article.is_published.is_(True))
     )
-    increment_query_count()
+
     total: int = (await db.execute(count_q)).scalar_one()
 
     # 2. Paginated rows with eager-loaded relationships
@@ -183,7 +182,7 @@ async def get_articles(
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
-    increment_query_count()
+
     result = await db.execute(articles_q)
     articles = result.unique().scalars().all()
 
@@ -211,7 +210,7 @@ async def get_article(db: AsyncSession, article_id: int) -> dict | None:
     are issued.
     """
     # Always increment view_count in the DB first.
-    increment_query_count()
+
     update_result = await db.execute(
         select(Article.id).where(Article.id == article_id)
     )
@@ -223,7 +222,7 @@ async def get_article(db: AsyncSession, article_id: int) -> dict | None:
         .where(Article.id == article_id)
         .values(view_count=Article.view_count + 1)
     )
-    increment_query_count()
+
     await db.flush()
 
     cache_key = f"articles:detail:{article_id}"
@@ -243,7 +242,7 @@ async def get_article(db: AsyncSession, article_id: int) -> dict | None:
             selectinload(Article.comments),
         )
     )
-    increment_query_count()
+
     result = await db.execute(q)
     article = result.unique().scalar_one_or_none()
     if article is None:
@@ -308,7 +307,7 @@ async def update_article(
             selectinload(Article.comments),
         )
     )
-    increment_query_count()
+
     result = await db.execute(q)
     article = result.unique().scalar_one_or_none()
     if article is None:

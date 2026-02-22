@@ -335,8 +335,8 @@ async def test_response_timing_headers(async_client: AsyncClient):
 @pytest.mark.asyncio
 async def test_article_list_query_count_header(async_client: AsyncClient):
     """
-    The X-Query-Count header must be present and reflect the actual number
-    of SQL queries executed during the request.
+    The X-Query-Count header must reflect the actual number of SQL queries
+    including those issued internally by eager-loading strategies.
     """
     user_resp = await async_client.post("/api/v1/users", json={
         "username": "qcuser",
@@ -353,5 +353,5 @@ async def test_article_list_query_count_header(async_client: AsyncClient):
     resp = await async_client.get("/api/v1/articles")
     assert "x-query-count" in resp.headers
     count = int(resp.headers["x-query-count"])
-    # Article list issues at least 2 queries: COUNT + SELECT.
-    assert count >= 2
+    # COUNT + SELECT(joinedload) + selectinload(tags) = 3
+    assert count == 3

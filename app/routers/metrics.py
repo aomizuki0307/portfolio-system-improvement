@@ -5,17 +5,16 @@ from app.database import get_db
 from app.models import Article, Comment, User
 from app.schemas import MetricsResponse
 from app.cache import cache
-from app.middleware import increment_query_count
 
 router = APIRouter(prefix="/api/v1/metrics", tags=["metrics"])
 
 @router.get("", response_model=MetricsResponse)
 async def get_metrics(db: AsyncSession = Depends(get_db)):
-    increment_query_count()
+
     total_articles = (await db.execute(select(func.count()).select_from(Article))).scalar_one()
-    increment_query_count()
+
     total_comments = (await db.execute(select(func.count()).select_from(Comment))).scalar_one()
-    increment_query_count()
+
     total_users = (await db.execute(select(func.count()).select_from(User))).scalar_one()
 
     avg_comments = total_comments / total_articles if total_articles > 0 else 0
