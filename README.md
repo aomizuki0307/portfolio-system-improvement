@@ -4,6 +4,8 @@
 
 > Demonstrating systematic API performance optimization: **328x faster response times** through database optimization, caching, and architectural improvements.
 
+**How it was done, step by step**: the full analysis write-up lives in [docs/](docs/) — [initial profiling](docs/01-initial-analysis.md) → [DB optimization](docs/02-db-optimization.md) → [caching layer](docs/03-caching-layer.md) → [refactoring](docs/04-refactoring.md) → [results](docs/05-results-summary.md).
+
 ## Performance Results
 
 | Metric | Before (v0.1) | After (v1.0) | Improvement |
